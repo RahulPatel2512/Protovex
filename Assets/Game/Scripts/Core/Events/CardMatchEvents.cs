@@ -10,6 +10,8 @@ namespace Game.Scripts.Core.Events
         public static event Action<float> OnWin;
         public static event Action OnGameStart;
         public static event Action OnGameReset;
+        
+        public static event System.Action<float> OnTimerUpdated;
 
 
         public static void RaiseMatch(ICardView a, ICardView b) => OnMatch?.Invoke(a, b);
@@ -17,5 +19,8 @@ namespace Game.Scripts.Core.Events
         public static void RaiseWin(float time) => OnWin?.Invoke(time);
         public static void GameStart()=> OnGameStart?.Invoke();
         public static void GameReset()=> OnGameReset?.Invoke();
+
+        public static void TimerUpdated(float obj)=> OnTimerUpdated?.Invoke(obj);
+        
     }
 }

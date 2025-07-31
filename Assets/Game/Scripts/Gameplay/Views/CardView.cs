@@ -17,6 +17,8 @@ namespace Game.Scripts.Gameplay.Views
         [SerializeField] private bool isMatched;
     
         public event Action<ICardView> Clicked;
+        
+        [Header("Timing")] [SerializeField] private float mismatchFlipBackDelay = 0.3f;
 
         public int PairId { get; set; } = -1;
         public bool IsFaceUp => isFaceUp;
@@ -48,8 +50,11 @@ namespace Game.Scripts.Gameplay.Views
         public void Conceal(float animTime = 0.1f)
         {
             if (isMatched || !isFaceUp) return;
-            isFaceUp = false;
-            StartCoroutine(Flip90(animTime, ApplyVisuals, null));
+            Scheduler.Invoke(() =>
+            {
+                isFaceUp = false;
+                StartCoroutine(Flip90(animTime, ApplyVisuals, null));
+            }, mismatchFlipBackDelay);
         }
 
         public void SetMatched(bool matched)

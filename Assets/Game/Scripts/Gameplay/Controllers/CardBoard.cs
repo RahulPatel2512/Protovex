@@ -19,9 +19,6 @@ namespace Game.Scripts.Gameplay.Controllers
 
         [Header("References")] [SerializeField]
         private GridGeneratorUI grid;
-
-        [Header("Timing")] [SerializeField] private float mismatchFlipBackDelay = 0.6f;
-
         // Services
         private ICardFactory _factory;
         private IDeckBuilder _deckBuilder;
@@ -59,6 +56,7 @@ namespace Game.Scripts.Gameplay.Controllers
         private void Update()
         {
             _timer.Tick(Time.unscaledDeltaTime);
+            CardMatchEvents.TimerUpdated(_timer.Elapsed); 
         }
 
         private void WaitAndBuildBoard()
@@ -140,7 +138,6 @@ namespace Game.Scripts.Gameplay.Controllers
             {
                 CardMatchEvents.RaiseMismatch(a, b);
                 UIManager.Audio.PlaySound("Mismatch");
-                yield return new WaitForSecondsRealtime(mismatchFlipBackDelay);
                 a.Conceal();
                 b.Conceal();
             }
