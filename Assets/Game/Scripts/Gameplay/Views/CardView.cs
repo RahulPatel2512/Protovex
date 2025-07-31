@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Game.Scripts.Core.Interfaces;
+using Game.Scripts.Utility;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,8 +26,7 @@ namespace Game.Scripts.Gameplay.Views
         {
             if (cardButton)
             {
-                cardButton.onClick.RemoveAllListeners();
-                cardButton.onClick.AddListener(OnClicked);
+                cardButton.SetOnClick(OnClicked);
             }
             ApplyVisuals();
         }
@@ -55,7 +55,7 @@ namespace Game.Scripts.Gameplay.Views
         public void SetMatched(bool matched)
         {
             isMatched = matched;
-            ApplyVisuals();
+            Scheduler.Invoke(ApplyVisuals,matched?0.2f:0);
             if (cardButton) cardButton.interactable = !matched;
         }
 
@@ -68,7 +68,6 @@ namespace Game.Scripts.Gameplay.Views
     
         public void Setup(Sprite faceSprite, int pairId)
         {
-            Debug.Log("My PairId"+pairId);
             PairId = pairId;
             if (faceImage) faceImage.sprite = faceSprite;
             isFaceUp = false;

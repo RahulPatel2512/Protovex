@@ -1,24 +1,26 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Scripts.Core.Events;
 using Game.Scripts.Core.Interfaces;
 using Game.Scripts.Core.Services;
 using Game.Scripts.Grid;
+using Game.Scripts.UI;
+using Game.Scripts.Utility;
 using UnityEngine;
 
 namespace Game.Scripts.Gameplay.Controllers
 {
     public class CardBoard : MonoBehaviour
     {
-        [Header("Dependencies")]
-        [SerializeField] private MonoBehaviour cardFactoryBehaviour;
+        [Header("Dependencies")] [SerializeField]
+        private MonoBehaviour cardFactoryBehaviour;
+
         [SerializeField] private Sprite[] faces;
-    
+
         [Header("References")] [SerializeField]
         private GridGeneratorUI grid;
-    
-        [Header("Timing")]
-        [SerializeField] private float mismatchFlipBackDelay = 0.6f;
+
+        [Header("Timing")] [SerializeField] private float mismatchFlipBackDelay = 0.6f;
 
         // Services
         private ICardFactory _factory;
@@ -30,39 +32,57 @@ namespace Game.Scripts.Gameplay.Controllers
         private readonly List<ICardView> _selection = new(2);
         private bool _inputLocked;
 
-        // Events
-        public event Action<ICardView, ICardView> OnMatch;
-        public event Action<ICardView, ICardView> OnMismatch;
-        public event Action<float> OnWin;
+        private void OnEnable()
+        {
+            CardMatchEvents.OnGameStart += WaitAndBuildBoard;
+            CardMatchEvents.OnGameReset += Restart;
+        }
+
+        private void OnDisable()
+        {
+            CardMatchEvents.OnGameStart -= WaitAndBuildBoard;
+            CardMatchEvents.OnGameReset -= Restart;
+        }
+
 
         private void Awake()
         {
             _factory = cardFactoryBehaviour as ICardFactory;
             if (_factory == null)
-                Debug.LogError("CardBoard: 'cardFactoryBehaviour' must implement ICardFactory (e.g., GridCardFactory).");
+                Debug.LogError(
+                    "CardBoard: 'cardFactoryBehaviour' must implement ICardFactory (e.g., GridCardFactory).");
 
             _deckBuilder = new DeckBuilder();
             _timer = new SimpleTimerService();
         }
+
         private void Update()
         {
             _timer.Tick(Time.unscaledDeltaTime);
         }
 
-        public void BuildBoard()
+        private void WaitAndBuildBoard()
         {
-            int total = grid.Cols  * grid.Rows;
-            if ((total & 1) == 1) { grid.Cols += 1; total = grid.Cols * grid.Rows; }
+            Scheduler.Invoke(BuildBoard, 0.1f);
+        }
+
+        private void BuildBoard()
+        {
+            var total = grid.Cols * grid.Rows;
+            if ((total & 1) == 1)
+            {
+                grid.Cols += 1;
+                total = grid.Cols * grid.Rows;
+            }
 
             _cards.Clear();
             _cards.AddRange(_factory.Build(grid.Cols, grid.Rows));
 
             var deck = _deckBuilder.Build(total, faces);
-            for (int i = 0; i < _cards.Count; i++)
+            for (var i = 0; i < _cards.Count; i++)
             {
                 var cv = _cards[i];
                 cv.Clicked -= OnCardClicked;
-                Debug.Log("Build"+deck[i].pairId);
                 cv.Setup(deck[i].face, deck[i].pairId);
                 cv.Clicked += OnCardClicked;
             }
@@ -70,7 +90,7 @@ namespace Game.Scripts.Gameplay.Controllers
             _selection.Clear();
             _inputLocked = false;
 
-            _timer.Reset(); 
+            _timer.Reset();
         }
 
         private void OnCardClicked(ICardView card)
@@ -107,17 +127,19 @@ namespace Game.Scripts.Gameplay.Controllers
             {
                 a.SetMatched(true);
                 b.SetMatched(true);
-                OnMatch?.Invoke(a, b);
+                CardMatchEvents.RaiseMatch(a, b);
+                UIManager.Audio.PlaySound("Match");
 
                 if (IsAllMatched())
                 {
                     _timer.Stop();
-                    OnWin?.Invoke(_timer.Elapsed);
+                    Scheduler.Invoke(()=>CardMatchEvents.RaiseWin(_timer.Elapsed), 0.2f);
                 }
             }
             else
             {
-                OnMismatch?.Invoke(a, b);
+                CardMatchEvents.RaiseMismatch(a, b);
+                UIManager.Audio.PlaySound("Mismatch");
                 yield return new WaitForSecondsRealtime(mismatchFlipBackDelay);
                 a.Conceal();
                 b.Conceal();
@@ -129,13 +151,20 @@ namespace Game.Scripts.Gameplay.Controllers
 
         private bool IsAllMatched()
         {
-            for (int i = 0; i < _cards.Count; i++)
-                if (!_cards[i].IsMatched) return false;
+            for (var i = 0; i < _cards.Count; i++)
+                if (!_cards[i].IsMatched)
+                    return false;
             return true;
         }
 
-        public void Restart() => BuildBoard();
-        
-        public float GetElapsedSeconds() => _timer.Elapsed;
+        private void Restart()
+        {
+            BuildBoard();
+        }
+
+        public float GetElapsedSeconds()
+        {
+            return _timer.Elapsed;
+        }
     }
 }

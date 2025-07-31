@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Game.Scripts.Core.Events;
 using Game.Scripts.Core.Interfaces;
 using Game.Scripts.Utility;
 using UnityEngine;
@@ -57,7 +59,17 @@ namespace Game.Scripts.Grid
             }
         }
 
-        public void SetGrid()
+        private void OnEnable()
+        {
+            CardMatchEvents.OnGameStart += SetGrid;
+        }
+
+        private void OnDisable()
+        {
+            CardMatchEvents.OnGameStart -= SetGrid;
+        }
+
+        private void SetGrid()
         {
             _grid = GetComponent<GridLayoutGroup>();
             if (gridContainer == null) gridContainer = (RectTransform)transform;

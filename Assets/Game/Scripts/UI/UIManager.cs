@@ -1,8 +1,12 @@
+using System;
+using Game.Scripts.Core.Events;
 using Game.Scripts.Gameplay.Controllers;
 using Game.Scripts.Grid;
+using Game.Scripts.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Game.Scripts.UI
@@ -11,10 +15,11 @@ namespace Game.Scripts.UI
     {
         [Header("References")] 
         [SerializeField] private GridGeneratorUI grid;
-        [SerializeField] private CardBoard cardBoard;
 
         [SerializeField] private GameObject mainMenuScreen;
         [SerializeField] private GameObject gamePlayScreen;
+        [SerializeField] private GameObject winScreen;
+        [SerializeField] private GameObject failScreen;
     
 
         [SerializeField] private Slider xSlider;
@@ -25,14 +30,29 @@ namespace Game.Scripts.UI
         private int _rows = 2;
     
         [SerializeField] private Button playButton;
+        
+        [SerializeField] private AudioManager audioManager;
+        public static AudioManager Audio;
 
         private void Awake()
         {
             if (playButton)
             {
-                playButton.onClick.RemoveAllListeners();
-                playButton.onClick.AddListener(OnClicked);
+                playButton.SetOnClick(OnClicked);
             }
+            Audio = audioManager;
+        }
+
+        private void OnEnable()
+        {
+            CardMatchEvents.OnWin += GameWin;
+            CardMatchEvents.OnGameReset += GameReset;
+        }
+        
+        private void OnDisable()
+        {
+            CardMatchEvents.OnWin -= GameWin;
+            CardMatchEvents.OnGameReset -= GameReset;
         }
 
         private void Start()
@@ -76,9 +96,34 @@ namespace Game.Scripts.UI
         {
             mainMenuScreen.SetActive(false);
             gamePlayScreen.SetActive(true);
-            grid.SetGrid();
-            cardBoard.BuildBoard();
+            CardMatchEvents.GameStart();
+        }
+        
+        private void GameWin(float obj)
+        {
+            gamePlayScreen.SetActive(false);
+            winScreen.SetActive(true);
         }
 
+        private void GameReset()
+        {
+            mainMenuScreen.SetActive(true);
+            winScreen.SetActive(false);
+            failScreen.SetActive(false);
+        }
+    }
+}
+
+public static class UIManagerExtensions
+{
+    public static void SetOnClick(this Button button, System.Action action, string sfx = null, float sfxVol = 1f)
+    {
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() =>
+        {
+            var source = UIManager.Audio.PlaySound(sfx ?? $"Click");
+            if (source) source.volume = sfxVol;
+            action?.Invoke();
+        });
     }
 }

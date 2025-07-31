@@ -31,11 +31,26 @@ namespace Game.Scripts.Core.Services
 
             var pool = faces.ToList();
             Shuffle(pool);
+            
+            Dictionary<Sprite, int> spriteToPairId = new();
+            int currentPairId = 0;
+
 
             int idx = 0;
             for (int i = 0; i < pairCount; i++)
             {
-                res.Add(new CardEntry { face = pool[idx], pairId = i });
+                
+                var sprite = pool[idx];
+                
+                if (!spriteToPairId.TryGetValue(sprite, out int pairId))
+                {
+                    pairId = currentPairId;
+                    spriteToPairId[sprite] = pairId;
+                    currentPairId++;
+                }
+                
+                res.Add(new CardEntry { face = sprite, pairId = pairId });
+
                 idx = (idx + 1) % pool.Count;
             }
             return res;
